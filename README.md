@@ -1,5 +1,5 @@
 
-Fusion 360 CAM posts processor for MPCNC 
+Fusion 360 CAM posts processor for MPCNC
 ====
 
 This is modified fork of https://github.com/guffy1234/mpcnc_posts_processor that was originally forked https://github.com/martindb/mpcnc_posts_processor.
@@ -7,10 +7,7 @@ This is modified fork of https://github.com/guffy1234/mpcnc_posts_processor that
 CAM posts processor for use with Fusion 360 and [MPCNC](https://www.v1engineering.com).
 
 Supported firmware:
-- Marlin 2.0
-- Repetier firmware 1.0.3 (not tested. gcode is same as for Marlin)
-- GRBL 1.1
-- RepRap firmware (Duet3d) 
+- Klipper
 
 Installation:
 - The post processor consists of a single file, mpcnc.cps.
@@ -45,7 +42,6 @@ Use these properties to control overall aspects of the job.
 
 |Title|Description|Default|
 |---|---|---|
-Job: CNC Firmware|Dialect of GCode to create|**Marlin 2.x**|
 Job: Job: Zero Starting Location (G92)|On start set the current location as 0,0,0 (G92).|**true**|
 Job: Manual Spindle On/Off|Enable to manually turn spindle motor on/off. Post processor will issue additional pauses for TURN ON/TURN OFF the motor.|**true**|
 Job: Comment Level|Controls a increasing level of comments to be included: Off, Important, Info, Debug|**Info**|
@@ -93,7 +89,7 @@ Allows G1 cuts to be converted to G0 Rapid movements in specific cases:
 
 If [Map: First G1 -> G0 Rapid] is true the post processor resolves the lost
 initial positioning movement at the beginning of a cut toolpath. This problem is often
-identified in forums as the tool being initially dragged across the work surface. 
+identified in forums as the tool being initially dragged across the work surface.
 
 If [Map: G1s -> G0s] is true then allows G1 XY cut movements (i.e. no change in Z) that occur
 at a height greater or equal to [Map: Safe Z to Rapid] to be converted to G0 Rapids.
@@ -140,7 +136,7 @@ Probe: G38 speed|G38 Probing's speed|**30**|
 
 Fusion 360 defines four levels of Through cut, currently these all map to power level "On - Through".
 
-The firmware selected in the parameter [Job: CNC Firmware] determines if the Grbl or Marlin/Reprap laser parameters are used. 
+The firmware selected in the parameter [Job: CNC Firmware] determines if the Grbl or Marlin/Reprap laser parameters are used.
 
 Fusion 360 does not use a coolant when using its jet tools (waterjet/laser/plasma). When using a laser it may be desirable to use air or some other device you have connected to the coolant channels. The [Laser: Coolant] can be used to force a coolant to be used for the laser operations (see coolant parameter on details for configuring the coolant channels).
 
@@ -165,7 +161,7 @@ Extern: Probe File|File with custom Gcode for tool probe (in nc folder)||
 
 ## Group 7: Coolant Control Pin Properties
 
-Coolant has two channels, A and B. Each channel can be configured to be off or set to 1 of the 8 coolant modes that Fusion 360 allows on operation. If a tool's collant requirements match a channel's setting then that channel is enabled. A warning is generated if a tool askes for coolant and there is not a channel that matches. 
+Coolant has two channels, A and B. Each channel can be configured to be off or set to 1 of the 8 coolant modes that Fusion 360 allows on operation. If a tool's collant requirements match a channel's setting then that channel is enabled. A warning is generated if a tool askes for coolant and there is not a channel that matches.
 
 If a channel matches the coolant requested the Channel becomes enabled. When a channel is enabled the post processor will include the text associated with the corresponding property [Coolant \<A or B\> Enable]. Note, Marlin and Grbl values are included as options, you must select based on your actual configuration. The firmware selected in property [Job: CNC Firmware] will not override your selection.
 
