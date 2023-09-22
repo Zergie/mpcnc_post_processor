@@ -31,10 +31,6 @@ install_script: klipper_macros/install.sh
 
 | Gcode   | Description                 |
 | ------- | --------------------------- |
-| G92     | Set origin offsets          |
-| G92.1   | Reset origin offsets        |
-| G92.2   | Suspend origin offsets      |
-| G92.3   | Resume origin offsets       |
 | G53     | Select machine coordinates  |
 | G54     | Select coord system 1       |
 | G55     | Select coord system 2       |
@@ -42,3 +38,17 @@ install_script: klipper_macros/install.sh
 | G57     | Select coord system 4       |
 | G58     | Select coord system 5       |
 | G59     | Select coord system 6       |
+| G92     | Set origin offsets          |
+| G92.1   | Reset origin offsets        |
+| G92.2   | Suspend origin offsets      |
+| G92.3   | Resume origin offsets       |
+| M0      | Pause                       |
+| M1      | Pause                       |
+| M601    | Pause                       |
+| T0      | Select tool 0               |
+| T1      | Select tool 1               |
+| T2      | Select tool 2               |
+| T3      | Select tool 3               |
+| T4      | Select tool 4               |
+| T5      | Select tool 5               |
+| T6      | Select tool 6               |
