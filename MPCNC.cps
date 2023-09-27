@@ -55,7 +55,6 @@ var eCoolant = {
 
 // user-defined properties
 properties = {
-  job1_SetOriginOnStart: true,           // Set current position as 0,0,0 on start (G92)
   job2_ManualSpindlePowerControl: true,  // Spindle motor is controlled by manual switch
   job3_CommentLevel: eComment.Info,      // The level of comments included
   job4_UseArcs: true,                    // Produce G2/G3 for arcs
@@ -121,10 +120,6 @@ properties = {
 };
 
 propertyDefinitions = {
-  job1_SetOriginOnStart: {
-    title: "Job: Zero Starting Location (G92)", description: "On start set the current location as 0,0,0 (G92)", group: 1,
-    type: "boolean", default_mm: true, default_in: true
-  },
   job2_ManualSpindlePowerControl: {
     title: "Job: Manual Spindle On/Off", description: "Enable to manually turn spindle motor on/off", group: 1,
     type: "boolean", default_mm: true, default_in: true
@@ -1475,13 +1470,10 @@ function Start() {
   writeComment(eComment.Info, "   Units = " + (unit == IN ? "inch" : "mm"));
   writeBlock(gUnitModal.format(unit == IN ? 20 : 21));
 
+  writeBlock("START_PRINT")
+  
   // writeComment(eComment.Info, "   Disable stepper timeout");
   // writeBlock(mFormat.format(84), sFormat.format(0));
-
-  if (properties.job1_SetOriginOnStart) {
-    writeComment(eComment.Info, "   Set current position to 0,0,0");
-    writeBlock(gFormat.format(92), xFormat.format(0), yFormat.format(0), zFormat.format(0));
-  }
 
   if (properties.probe1_OnStart && tool.number != 0 && !tool.isJetTool()) {
     onCommand(COMMAND_TOOL_MEASURE);
@@ -1489,6 +1481,8 @@ function Start() {
 }
 
 function end() {
+  writeBlock("END_PRINT")
+
   display_text("Job end");
 }
 
@@ -1500,7 +1494,6 @@ function spindleOn(_spindleSpeed, _clockwise) {
       askUser("Turn ON " + speedFormat.format(_spindleSpeed) + "RPM", "Spindle", false);
     }
   } else {
-    writeComment(eComment.Important, " >>> Spindle Speed " + speedFormat.format(_spindleSpeed));
     writeBlock(mFormat.format(_clockwise ? 3 : 4), sOutput.format(spindleSpeed));
   }
   this.spindleEnabled = true;
