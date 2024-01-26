@@ -5,16 +5,19 @@
 #include <Adafruit_SSD1351.h>
 #include <SPI.h>
 #include <gfxfont.h>
+#include "PCF8575.h"
 
 // Screen dimensions
 #define SCREEN_WIDTH  128
 #define SCREEN_HEIGHT 128
 
 // Used pins
-#define POT1_PIN A0
-#define POT2_PIN A1
 #define DC_PIN   4
 #define CS_PIN   5
+#define ROW1_PIN 6
+#define ROW2_PIN 7
+#define ROW3_PIN 8
+#define ROW4_PIN 9
 
 // Color definitions
 #define	BLACK           0x0000
@@ -27,6 +30,7 @@
 #define WHITE           0xFFFF
 
 Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, CS_PIN, DC_PIN, -1);
+PCF8575 pcf = PCF8575();
 
 void setup(void) {
   Serial.begin(9600);
@@ -34,12 +38,25 @@ void setup(void) {
   tft.begin();
   tft.fillScreen(RED);
 
+  pcf.begin();
+  pcf.write16(0x0000);
+
+  pinMode(ROW1_PIN, INPUT_PULLUP);
+  pinMode(ROW2_PIN, INPUT_PULLUP);
+  pinMode(ROW3_PIN, INPUT_PULLUP);
+  pinMode(ROW4_PIN, INPUT_PULLUP);
+
   Serial.println("init done");
 }
 
 void loop() {
-  // axis[1] = AXIS[(int)(analogRead(POT1_PIN) / 150) - 1];
-  // step[1] = STEP[(int)(analogRead(POT2_PIN) / 150) - 1];
+  Serial.print(digitalRead(ROW1_PIN));
+  Serial.print(digitalRead(ROW2_PIN));
+  Serial.print(digitalRead(ROW3_PIN));
+  Serial.print(digitalRead(ROW4_PIN));
+  Serial.println();
+  delay(100);
+  return;
 
   char buffer[256];
   if (Serial.readBytes(buffer, 1) > 0) {
