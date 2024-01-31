@@ -42,6 +42,7 @@ install_script: klipper_macros/install.sh
 | G92.1   | Reset origin offsets        |
 | G92.2   | Suspend origin offsets      |
 | G92.3   | Resume origin offsets       |
+| G990028 | Home axis (Z first)         |
 | M0      | Pause                       |
 | M1      | Pause                       |
 | M601    | Pause                       |
