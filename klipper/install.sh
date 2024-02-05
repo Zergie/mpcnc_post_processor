@@ -8,10 +8,10 @@ if [ ! -d "$PDIR" ] ; then
     exit 1
 fi
 
-# update link to macros
-echo "mpcnc_post_processor: linking printer_data to macros"
-rm "${PDIR}/config/macros" 2> /dev/null
-ln -s "${DIR}" "${PDIR}/config/macros"
+# update links
+echo "mpcnc_post_processor: linking mpcnc to printer_data"
+rm "${PDIR}/config/mpcnc" 2> /dev/null
+ln -s "${DIR}" "${PDIR}/config/mpcnc"
 
 # initial variables.cfg
 if [ ! -f "$PDIR/variables.cfg" ] ; then
