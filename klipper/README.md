@@ -61,10 +61,3 @@ install_script: klipper/install.sh
 | PAUSE           | pause with beep             | optional |
 | RESUME          | resume with beep            | optional |
 | START_PRINT     | startup print               | optional |
-| T0              | Select tool 0               |          |
-| T1              | Select tool 1               |          |
-| T2              | Select tool 2               |          |
-| T3              | Select tool 3               |          |
-| T4              | Select tool 4               |          |
-| T5              | Select tool 5               |          |
-| T6              | Select tool 6               |          |
