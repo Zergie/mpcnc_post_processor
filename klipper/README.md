@@ -23,9 +23,9 @@ Clone this repo to your $Home folder.
 type: git_repo
 path: ~/mpcnc_post_processor
 origin: https://github.com/Zergie/mpcnc_post_processor.git
-primary_branch:master
-env: ~/mobileraker-env/bin/python
+primary_branch: master
 install_script: klipper/install.sh
+managed_services: klipper
 ```
 
 ### Added G-codes
