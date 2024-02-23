@@ -1,0 +1,17 @@
+version: "3.8"
+services:
+  printer:
+    container_name: printer
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./printer_data:/home/printer/printer_data:delegated
+    ports:
+      - "7125:7125"
+      - "8110:8080"
+    networks:
+      - dev_net
+networks:
+  dev_net:
+    driver: bridge

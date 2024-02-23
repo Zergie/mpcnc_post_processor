@@ -1,6 +1,7 @@
 #!/bin/sh
 
 PDIR="${HOME}/printer_data"
+ENVDIR="${HOME}/mpcnc_post_processor-env"
 DIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 if [ ! -d "$PDIR" ] ; then

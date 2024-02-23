@@ -1,0 +1,27 @@
+version: "3.8"
+services:
+  printer:
+    container_name: printer
+    build:
+      context: ./virtual-klipper-printer
+      dockerfile: Dockerfile
+    volumes:
+      - ./printer_data:/home/printer/printer_data:delegated
+      - ..:/home/printer/mpcnc_post_processor:delegated
+      - ../klipper:/home/printer/printer_data/config/mpcnc
+    ports:
+      - "7125:7125"
+      - "8110:8080"
+    networks:
+      - dev_net
+    command: command
+  fluidd:
+    container_name: fluidd
+    image: ghcr.io/fluidd-core/fluidd:latest
+    ports:
+      - "8080:80"
+    networks:
+      - dev_net
+networks:
+  dev_net:
+    driver: bridge
