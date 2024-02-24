@@ -1,3 +1,5 @@
+[CmdletBinding()]
+param()
 $klipper_url = "trident.local"
 $klipper_user = "biqu"
 $gcode = @(
