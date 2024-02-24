@@ -1,6 +1,6 @@
 # Klipper Macros for MPCNC
 
-Useful klipper macros for useing with your MPCNC.
+Useful klipper macros for using with your MPCNC.
 
 ### Installation
 
