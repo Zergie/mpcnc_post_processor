@@ -614,7 +614,7 @@ function onOpen() {
 function onClose() {
   flushMotions();
   writeComment(eComment.Important, " *** STOP begin ***");
-  write(properties.gcodeStop)
+  writeBlock(properties.gcodeStop)
   writeComment(eComment.Important, " *** STOP end ***");
 }
 
@@ -999,7 +999,7 @@ function writeFirstSection() {
   writeInformation();
 
   writeComment(eComment.Important, " *** START begin ***");
-  write(properties.gcodeStart);
+  writeBlock(properties.gcodeStart);
   writeComment(eComment.Important, " *** START end ***");
   writeComment(eComment.Important, " ");
 }
