@@ -54,10 +54,6 @@ var eCoolant = {
 // user-defined properties
 properties = {
   job3_CommentLevel: eComment.Info,      // The level of comments included
-  job5_SequenceNumbers: false,           // show sequence numbers
-  job6_SequenceNumberStart: 10,          // first sequence number
-  job7_SequenceNumberIncrement: 10,      // increment for sequence numbers
-  job8_SeparateWordsWithSpace: true,     // specifies that the words should be separated with a white space
 
   fr0_TravelSpeedXY: 2500,             // High speed for travel movements X & Y (mm/min)
   fr1_TravelSpeedZ: 300,               // High speed for travel movements Z (mm/min)
@@ -93,6 +89,9 @@ properties = {
   cl3_coolantB_Mode: eCoolant.Off,     // Use issuing g-codes for control Coolant channel B
   cl4_cust_coolantBOn: "M8",           // GCode command to turn on Coolant channel B
   cl5_cust_coolantBOff: "M9",          // Gcode command to turn off Coolant channel B
+
+  klipper0_url: "",                    // url of the klipper instance (e.g. http://10.0.0.99)
+  klipper1_startAfterUpload: false,    // start machining after upload to klipper
 };
 
 propertyDefinitions = {
@@ -105,22 +104,6 @@ propertyDefinitions = {
       { title: eComment.prop[eComment.Info].name, id: eComment.Info },
       { title: eComment.prop[eComment.Debug].name, id: eComment.Debug },
     ]
-  },
-  job5_SequenceNumbers: {
-    title: "Job: Enable Line #s", description: "Show sequence numbers", group: 1,
-    type: "boolean", default_mm: false, default_in: false
-  },
-  job6_SequenceNumberStart: {
-    title: "Job: First Line #", description: "First sequence number", group: 1,
-    type: "integer", default_mm: 10, default_in: 10
-  },
-  job7_SequenceNumberIncrement: {
-    title: "Job: Line # Increment", description: "Sequence number increment", group: 1,
-    type: "integer", default_mm: 1, default_in: 1
-  },
-  job8_SeparateWordsWithSpace: {
-    title: "Job: Include Whitespace", description: "Includes whitespace seperation between text", group: 1,
-    type: "boolean", default_mm: true, default_in: true
   },
 
   fr0_TravelSpeedXY: {
@@ -267,9 +250,18 @@ propertyDefinitions = {
     title: "Coolant: B Disable", description: "Gcode to turn Off coolant B", group: 8,
     type: "string", default_mm: "", default_in: "",
   },
-};
 
-var sequenceNumber;
+  // klipper
+  klipper0_url : {
+    title: "Klipper url", description: "URL to upload to (must start with http:// or https://)", group: 9,
+    type: "string", default_mm: "", default_in: "",
+  },
+
+  klipper1_startAfterUpload : {
+    title: "Start After Upload", description: "Start machine after upload", group: 9,
+    type: "boolean", default_mm: false, default_in: false,
+  },
+};
 
 // Formats
 var gFormat = createFormat({ prefix: "G", decimals: 1 });
@@ -326,18 +318,16 @@ maximumCircularSweep = toRad(180);
 allowHelicalMoves = false;
 allowedCircularPlanes = undefined;
 
+//---------------- gcode ----------------
 // Writes the specified block.
-function writeBlock() {
-  if (properties.job5_SequenceNumbers) {
-    writeWords2("N" + sequenceNumber, arguments);
-    sequenceNumber += properties.job7_SequenceNumberIncrement;
-  } else {
-    writeWords(arguments);
-  }
+var gcode = "";
+function WriteBlock() {
+  gcode += Array.from(arguments).join(" ") + "\n";
+  WriteWords(arguments);
 }
 
 function flushMotions() {
-  writeBlock(mFormat.format(400));
+  WriteBlock(mFormat.format(400));
 }
 
 //---------------- Safe Rapids ----------------
@@ -376,9 +366,9 @@ function parseSafeZProperty() {
     safeZHeightDefault = str.match(eSafeZ.prop[safeZMode].numRegEx);
 
     if ((safeZHeightDefault == null) || (safeZHeightDefault.length != 2)) {
-      writeComment(eComment.Debug, " parseSafeZProperty: " + safeZHeightDefault);
-      writeComment(eComment.Debug, " parseSafeZProperty.length: " + (safeZHeightDefault != null ? safeZHeightDefault.length : "na"));
-      writeComment(eComment.Debug, " parseSafeZProperty: Couldn't find number");
+      WriteComment(eComment.Debug, " parseSafeZProperty: " + safeZHeightDefault);
+      WriteComment(eComment.Debug, " parseSafeZProperty.length: " + (safeZHeightDefault != null ? safeZHeightDefault.length : "na"));
+      WriteComment(eComment.Debug, " parseSafeZProperty: Couldn't find number");
       safeZMode = eSafeZ.ERROR;
       safeZHeightDefault = 15;
     }
@@ -387,8 +377,8 @@ function parseSafeZProperty() {
     }
   }
 
-  writeComment(eComment.Debug, " parseSafeZProperty: safeZMode = '" + eSafeZ.prop[safeZMode].name + "'");
-  writeComment(eComment.Debug, " parseSafeZProperty: safeZHeightDefault = " + safeZHeightDefault);
+  WriteComment(eComment.Debug, " parseSafeZProperty: safeZMode = '" + eSafeZ.prop[safeZMode].name + "'");
+  WriteComment(eComment.Debug, " parseSafeZProperty: safeZHeightDefault = " + safeZHeightDefault);
 }
 
 function safeZforSection(_section) {
@@ -396,7 +386,7 @@ function safeZforSection(_section) {
     switch (safeZMode) {
       case eSafeZ.CONST:
         safeZHeight = safeZHeightDefault;
-        writeComment(eComment.Important, " SafeZ using const: " + safeZHeight);
+        WriteComment(eComment.Important, " SafeZ using const: " + safeZHeight);
         break;
 
       case eSafeZ.FEED:
@@ -406,16 +396,16 @@ function safeZforSection(_section) {
 
           if (abs == 1) {
             safeZHeight = feed;
-            writeComment(eComment.Info, " SafeZ feed level: " + safeZHeight);
+            WriteComment(eComment.Info, " SafeZ feed level: " + safeZHeight);
           }
           else {
             safeZHeight = safeZHeightDefault;
-            writeComment(eComment.Important, " SafeZ feed level not abs: " + safeZHeight);
+            WriteComment(eComment.Important, " SafeZ feed level not abs: " + safeZHeight);
           }
         }
         else {
           safeZHeight = safeZHeightDefault;
-          writeComment(eComment.Important, " SafeZ feed level not defined: " + safeZHeight);
+          WriteComment(eComment.Important, " SafeZ feed level not defined: " + safeZHeight);
         }
         break;
 
@@ -426,16 +416,16 @@ function safeZforSection(_section) {
 
           if (abs == 1) {
             safeZHeight = retract;
-            writeComment(eComment.Info, " SafeZ retract level: " + safeZHeight);
+            WriteComment(eComment.Info, " SafeZ retract level: " + safeZHeight);
           }
           else {
             safeZHeight = safeZHeightDefault;
-            writeComment(eComment.Important, " SafeZ retract level not abs: " + safeZHeight);
+            WriteComment(eComment.Important, " SafeZ retract level not abs: " + safeZHeight);
           }
         }
         else {
           safeZHeight = safeZHeightDefault;
-          writeComment(eComment.Important, " SafeZ: retract level not defined: " + safeZHeight);
+          WriteComment(eComment.Important, " SafeZ: retract level not defined: " + safeZHeight);
         }
         break;
 
@@ -446,22 +436,22 @@ function safeZforSection(_section) {
 
           if (abs == 1) {
             safeZHeight = clearance;
-            writeComment(eComment.Info, " SafeZ clearance level: " + safeZHeight);
+            WriteComment(eComment.Info, " SafeZ clearance level: " + safeZHeight);
           }
           else {
             safeZHeight = safeZHeightDefault;
-            writeComment(eComment.Important, " SafeZ clearance level not abs: " + safeZHeight);
+            WriteComment(eComment.Important, " SafeZ clearance level not abs: " + safeZHeight);
           }
         }
         else {
           safeZHeight = safeZHeightDefault;
-          writeComment(eComment.Important, " SafeZ clearance level not defined: " + safeZHeight);
+          WriteComment(eComment.Important, " SafeZ clearance level not defined: " + safeZHeight);
         }
         break;
 
       case eSafeZ.ERROR:
         safeZHeight = safeZHeightDefault;
-        writeComment(eComment.Important, " >>> WARNING: " + propertyDefinitions.mapF_SafeZ.title + "format error: " + safeZHeight);
+        WriteComment(eComment.Important, " >>> WARNING: " + propertyDefinitions.mapF_SafeZ.title + "format error: " + safeZHeight);
         break;
     }
   }
@@ -478,11 +468,11 @@ function isSafeToRapid(x, y, z) {
 
     // Calculat a z to 3 decimal places for zSafe comparison, every where else use z to avoid mixing rounded with unrounded
     var z_round = z.round(3);
-    writeComment(eComment.Debug, "isSafeToRapid z: " + z + " z_round: " + z_round);
+    WriteComment(eComment.Debug, "isSafeToRapid z: " + z + " z_round: " + z_round);
 
     let zSafe = (z_round >= safeZHeight);
 
-    writeComment(eComment.Debug, "isSafeToRapid zSafe: " + zSafe + " z_round: " + z_round + " safeZHeight: " + safeZHeight);
+    WriteComment(eComment.Debug, "isSafeToRapid zSafe: " + zSafe + " z_round: " + z_round + " safeZHeight: " + safeZHeight);
 
     // Destination z must be in safe zone.
     if (zSafe) {
@@ -491,7 +481,7 @@ function isSafeToRapid(x, y, z) {
       let zUp = (z > cur.z);
       let xyConstant = ((x == cur.x) && (y == cur.y));
       let curZSafe = (cur.z >= safeZHeight);
-      writeComment(eComment.Debug, "isSafeToRapid curZSafe: " + curZSafe + " cur.z: " + cur.z);
+      WriteComment(eComment.Debug, "isSafeToRapid curZSafe: " + curZSafe + " cur.z: " + cur.z);
 
       // Restore Rapids only when the target Z is safe and
       //   Case 1: Z is not changing, but XY are
@@ -521,12 +511,12 @@ function isSafeToRapid(x, y, z) {
 
 function CoolantA(on) {
   coolantText = on ? properties.cl1_cust_coolantAOn : properties.cl2_cust_coolantAOff;
-  writeBlock(coolantText);
+  WriteBlock(coolantText);
 }
 
 function CoolantB(on) {
   coolantText = on ? properties.cl4_cust_coolantBOn : properties.cl5_cust_coolantBOff;
-  writeBlock(coolantText);
+  WriteBlock(coolantText);
 }
 
 // Manage two channels of coolant by tracking which coolant is being using for
@@ -537,7 +527,7 @@ var coolantChannelA = eCoolant.Off;   // The coolant running in ChannelA
 var coolantChannelB = eCoolant.Off;   // The coolant running in ChannelB
 
 function setCoolant(coolant) {
-  writeComment(eComment.Debug, " ---- Coolant: " + coolant + " cur: " + curCoolant + " A: " + coolantChannelA + " B: " + coolantChannelB);
+  WriteComment(eComment.Debug, " ---- Coolant: " + coolant + " cur: " + curCoolant + " A: " + coolantChannelA + " B: " + coolantChannelB);
 
   // If the coolant for this tool is the same as the current coolant then there is nothing to do
   if (curCoolant == coolant) {
@@ -547,13 +537,13 @@ function setCoolant(coolant) {
   // We are changing coolant, so disable any active coolant channels
   // before we switch to the other coolant
   if (coolantChannelA != eCoolant.Off) {
-    writeComment((coolant == eCoolant.Off) ? eComment.Important : eComment.Info, " >>> Coolant Channel A: " + eCoolant.prop[eCoolant.Off].name);
+    WriteComment((coolant == eCoolant.Off) ? eComment.Important : eComment.Info, " >>> Coolant Channel A: " + eCoolant.prop[eCoolant.Off].name);
     coolantChannelA = eCoolant.Off;
     CoolantA(false);
   }
 
   if (coolantChannelB != eCoolant.Off) {
-    writeComment((coolant == eCoolant.Off) ? eComment.Important : eComment.Info, " >>> Coolant Channel B: " + eCoolant.prop[eCoolant.Off].name);
+    WriteComment((coolant == eCoolant.Off) ? eComment.Important : eComment.Info, " >>> Coolant Channel B: " + eCoolant.prop[eCoolant.Off].name);
     coolantChannelB = eCoolant.Off;
     CoolantB(false);
   }
@@ -568,7 +558,7 @@ function setCoolant(coolant) {
 
   if (coolant != eCoolant.Off) {
     if (properties.cl0_coolantA_Mode == coolant) {
-      writeComment(eComment.Important, " >>> Coolant Channel A: " + eCoolant.prop[coolant].name);
+      WriteComment(eComment.Important, " >>> Coolant Channel A: " + eCoolant.prop[coolant].name);
       coolantChannelA = coolant;
       curCoolant = coolant;
       warn = false;
@@ -576,7 +566,7 @@ function setCoolant(coolant) {
     }
 
     if (properties.cl3_coolantB_Mode == coolant) {
-      writeComment(eComment.Important, " >>> Coolant Channel B: " + eCoolant.prop[coolant].name);
+      WriteComment(eComment.Important, " >>> Coolant Channel B: " + eCoolant.prop[coolant].name);
       coolantChannelB = coolant;
       curCoolant = coolant;
       warn = false;
@@ -584,7 +574,7 @@ function setCoolant(coolant) {
     }
 
     if (warn) {
-      writeComment(eComment.Important, " >>> WARNING: No matching Coolant channel : " + ((coolant <= eCoolant.FloodThroughTool) ? eCoolant.prop[coolant].name : "unknown") + " requested");
+      WriteComment(eComment.Important, " >>> WARNING: No matching Coolant channel : " + ((coolant <= eCoolant.FloodThroughTool) ? eCoolant.prop[coolant].name : "unknown") + " requested");
     }
   }
 }
@@ -598,14 +588,6 @@ function onOpen() {
   // Force F___ on every G0/G1 move
   fOutput = createVariable({ force: true }, fFormat);
 
-  // Set the starting sequence number for line numbering
-  sequenceNumber = properties.job6_SequenceNumberStart;
-
-  // Set the seperator used between text
-  if (!properties.job8_SeparateWordsWithSpace) {
-    setWordSeparator("");
-  }
-
   // Determine the safeZHeight to do rapids
   parseSafeZProperty();
 }
@@ -613,9 +595,31 @@ function onOpen() {
 // Called at end of gcode file
 function onClose() {
   flushMotions();
-  writeComment(eComment.Important, " *** STOP begin ***");
-  writeBlock(properties.gcodeStop)
-  writeComment(eComment.Important, " *** STOP end ***");
+  WriteComment(eComment.Important, " *** STOP begin ***");
+  WriteBlock(properties.gcodeStop)
+  WriteComment(eComment.Important, " *** STOP end ***");
+
+  const url = properties.klipper0_url;
+  if (url.length > 0) {
+    var filename = FileSystem.getFilename(getOutputPath());
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${url}/server/files/upload`, false, null, null);
+    xhr.setRequestHeader('Content-Type', ' multipart/form-data; boundary="3a7e4fd3-e5b7-450d-adc4-9bb652adadf2"');
+    xhr.send("--3a7e4fd3-e5b7-450d-adc4-9bb652adadf2\r\n" + 
+            `Content-Disposition: form-data; name=file; filename=${filename}\r\n` +
+            "Content-Type: application/octet-stream\r\n" +
+            "\r\n" +
+            gcode + 
+            "\r\n\r\n" +
+            "--3a7e4fd3-e5b7-450d-adc4-9bb652adadf2--\r\n");
+    
+      if (properties.klipper1_startAfterUpload) {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", `${url}/printer/print/start?filename=${filename}`, false, null, null);
+            xhr.send("bob");
+    }
+  }
 }
 
 var forceSectionToStartWithRapid = false;
@@ -633,17 +637,17 @@ function onSection() {
 
   // Write Start gcode of the documment (after the "onParameters" with the global info)
   if (isFirstSection()) {
-    writeFirstSection();
+    WriteFirstSection();
   }
 
-  writeComment(eComment.Important, " *** SECTION begin ***");
+  WriteComment(eComment.Important, " *** SECTION begin ***");
 
   // Print min/max boundaries for each section
   vectorX = new Vector(1, 0, 0);
   vectorY = new Vector(0, 1, 0);
-  writeComment(eComment.Info, "   X Min: " + xyzFormat.format(currentSection.getGlobalRange(vectorX).getMinimum()) + " - X Max: " + xyzFormat.format(currentSection.getGlobalRange(vectorX).getMaximum()));
-  writeComment(eComment.Info, "   Y Min: " + xyzFormat.format(currentSection.getGlobalRange(vectorY).getMinimum()) + " - Y Max: " + xyzFormat.format(currentSection.getGlobalRange(vectorY).getMaximum()));
-  writeComment(eComment.Info, "   Z Min: " + xyzFormat.format(currentSection.getGlobalZRange().getMinimum()) + " - Z Max: " + xyzFormat.format(currentSection.getGlobalZRange().getMaximum()));
+  WriteComment(eComment.Info, "   X Min: " + xyzFormat.format(currentSection.getGlobalRange(vectorX).getMinimum()) + " - X Max: " + xyzFormat.format(currentSection.getGlobalRange(vectorX).getMaximum()));
+  WriteComment(eComment.Info, "   Y Min: " + xyzFormat.format(currentSection.getGlobalRange(vectorY).getMinimum()) + " - Y Max: " + xyzFormat.format(currentSection.getGlobalRange(vectorY).getMaximum()));
+  WriteComment(eComment.Info, "   Z Min: " + xyzFormat.format(currentSection.getGlobalZRange().getMinimum()) + " - Z Max: " + xyzFormat.format(currentSection.getGlobalZRange().getMaximum()));
 
   // Determine the Safe Z Height to map G1s to G0s
   safeZforSection(currentSection);
@@ -651,12 +655,12 @@ function onSection() {
   // Do a tool change if tool changes are enabled and its not the first section and this section uses
   // a different tool then the previous section
   if (properties.toolChange0_Enabled && !isFirstSection() && tool.number != getPreviousSection().getTool().number) {
-    writeComment(eComment.Important, " --- Tool Change Start")
-    write(properties.gcodeTool);
-    writeComment(eComment.Important, " --- Tool Change End")
+    WriteComment(eComment.Important, " --- Tool Change Start")
+    WriteBlock(properties.gcodeTool);
+    WriteComment(eComment.Important, " --- Tool Change End")
   }
 
-  writeComment(eComment.Info, " " + sectionComment + " - Milling - Tool: " + tool.number + " - " + tool.comment + " " + getToolTypeName(tool.type));
+  WriteComment(eComment.Info, " " + sectionComment + " - Milling - Tool: " + tool.number + " - " + tool.comment + " " + getToolTypeName(tool.type));
 
   onCommand(COMMAND_START_SPINDLE);
   onCommand(COMMAND_COOLANT_ON);
@@ -668,12 +672,12 @@ function onSection() {
 // Called in every section end
 function onSectionEnd() {
   resetAll();
-  writeComment(eComment.Important, " *** SECTION end ***");
-  writeComment(eComment.Important, "");
+  WriteComment(eComment.Important, " *** SECTION end ***");
+  WriteComment(eComment.Important, "");
 }
 
 function onComment(message) {
-  writeComment(eComment.Important, message);
+  WriteComment(eComment.Important, message);
 }
 
 var pendingRadiusCompensation = RADIUS_COMPENSATION_OFF;
@@ -701,13 +705,13 @@ function onLinear(x, y, z, feed) {
   // slowest cutting feedrate, generally Z's feedrate.
 
   if (properties.mapD_RestoreFirstRapids && (forceSectionToStartWithRapid == true)) {
-    writeComment(eComment.Important, " First G1 --> G0");
+    WriteComment(eComment.Important, " First G1 --> G0");
 
     forceSectionToStartWithRapid = false;
     onRapid(x, y, z);
   }
   else if (isSafeToRapid(x, y, z)) {
-    writeComment(eComment.Important, " Safe G1 --> G0");
+    WriteComment(eComment.Important, " Safe G1 --> G0");
 
     onRapid(x, y, z);
   }
@@ -740,14 +744,14 @@ function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
 
 // Called on Dwell Manual NC invocation
 function onDwell(seconds) {
-  writeComment(eComment.Important, " >>> Dwell");
+  WriteComment(eComment.Important, " >>> Dwell");
   if (seconds > 99999.999) {
     warning(localize("Dwelling time is out of range."));
   }
 
   seconds = clamp(0.001, seconds, 99999.999);
 
-  writeBlock(gFormat.format(4), "S" + secFormat.format(seconds));
+  WriteBlock(gFormat.format(4), "S" + secFormat.format(seconds));
 }
 
 // Called with every parameter in the documment/section
@@ -756,23 +760,23 @@ function onParameter(name, value) {
   // Write gcode initial info
   // Product version
   if (name == "generated-by") {
-    writeComment(eComment.Important, value);
-    writeComment(eComment.Important, " Posts processor: " + FileSystem.getFilename(getConfigurationPath()));
+    WriteComment(eComment.Important, value);
+    WriteComment(eComment.Important, " Posts processor: " + FileSystem.getFilename(getConfigurationPath()));
   }
 
   // Date
   else if (name == "generated-at") {
-    writeComment(eComment.Important, " Gcode generated: " + value + " GMT");
+    WriteComment(eComment.Important, " Gcode generated: " + value + " GMT");
   }
 
   // Document
   else if (name == "document-path") {
-    writeComment(eComment.Important, " Document: " + value);
+    WriteComment(eComment.Important, " Document: " + value);
   }
 
   // Setup
   else if (name == "job-description") {
-    writeComment(eComment.Important, " Setup: " + value);
+    WriteComment(eComment.Important, " Setup: " + value);
   }
 
   // Get section comment
@@ -781,7 +785,7 @@ function onParameter(name, value) {
   }
 
   else {
-    writeComment(eComment.Debug, " param: " + name + " = " + value);
+    WriteComment(eComment.Debug, " param: " + name + " = " + value);
   }
 }
 
@@ -843,7 +847,7 @@ function onMovement(movement) {
     id = String(movement);
   }
 
-  writeComment(eComment.Info, " " + id);
+  WriteComment(eComment.Info, " " + id);
 }
 
 var currentSpindleSpeed = 0;
@@ -864,7 +868,7 @@ function onSpindleSpeed(spindleSpeed) {
 }
 
 function onCommand(command) {
-  writeComment(eComment.Info, " " + getCommandStringId(command));
+  WriteComment(eComment.Info, " " + getCommandStringId(command));
 
   switch (command) {
     case COMMAND_START_SPINDLE:
@@ -895,7 +899,7 @@ function onCommand(command) {
       probeTool();
       return;
     case COMMAND_STOP:
-      writeBlock(mFormat.format(0));
+      WriteBlock(mFormat.format(0));
       return;
   }
 }
@@ -907,7 +911,7 @@ function resetAll() {
   fOutput.reset();
 }
 
-function writeInformation() {
+function WriteInformation() {
   // Calcualte the min/max ranges across all sections
   var toolZRanges = {};
   var vectorX = new Vector(1, 0, 0);
@@ -948,15 +952,15 @@ function writeInformation() {
   }
 
   // Display the Range Table
-  writeComment(eComment.Info, " ");
-  writeComment(eComment.Info, " Ranges Table:");
-  writeComment(eComment.Info, "   X: Min=" + xyzFormat.format(ranges.x.min) + " Max=" + xyzFormat.format(ranges.x.max) + " Size=" + xyzFormat.format(ranges.x.max - ranges.x.min));
-  writeComment(eComment.Info, "   Y: Min=" + xyzFormat.format(ranges.y.min) + " Max=" + xyzFormat.format(ranges.y.max) + " Size=" + xyzFormat.format(ranges.y.max - ranges.y.min));
-  writeComment(eComment.Info, "   Z: Min=" + xyzFormat.format(ranges.z.min) + " Max=" + xyzFormat.format(ranges.z.max) + " Size=" + xyzFormat.format(ranges.z.max - ranges.z.min));
+  WriteComment(eComment.Info, " ");
+  WriteComment(eComment.Info, " Ranges Table:");
+  WriteComment(eComment.Info, "   X: Min=" + xyzFormat.format(ranges.x.min) + " Max=" + xyzFormat.format(ranges.x.max) + " Size=" + xyzFormat.format(ranges.x.max - ranges.x.min));
+  WriteComment(eComment.Info, "   Y: Min=" + xyzFormat.format(ranges.y.min) + " Max=" + xyzFormat.format(ranges.y.max) + " Size=" + xyzFormat.format(ranges.y.max - ranges.y.min));
+  WriteComment(eComment.Info, "   Z: Min=" + xyzFormat.format(ranges.z.min) + " Max=" + xyzFormat.format(ranges.z.max) + " Size=" + xyzFormat.format(ranges.z.max - ranges.z.min));
 
   // Display the Tools Table
-  writeComment(eComment.Info, " ");
-  writeComment(eComment.Info, " Tools Table:");
+  WriteComment(eComment.Info, " ");
+  WriteComment(eComment.Info, " Tools Table:");
   var tools = getToolTable();
   if (tools.getNumberOfTools() > 0) {
     for (var i = 0; i < tools.getNumberOfTools(); ++i) {
@@ -969,45 +973,45 @@ function writeInformation() {
         comment += " - ZMIN=" + xyzFormat.format(toolZRanges[tool.number].getMinimum());
       }
       comment += " - " + getToolTypeName(tool.type) + " " + tool.comment;
-      writeComment(eComment.Info, comment);
+      WriteComment(eComment.Info, comment);
     }
   }
 
   // Display the Feedrate and Scaling Properties
-  writeComment(eComment.Info, " ");
-  writeComment(eComment.Info, " Feedrate and Scaling Properties:");
-  writeComment(eComment.Info, "   Feed: Travel speed X/Y = " + properties.fr0_TravelSpeedXY);
-  writeComment(eComment.Info, "   Feed: Travel Speed Z = " + properties.fr1_TravelSpeedZ);
-  writeComment(eComment.Info, "   Feed: Scale Feedrate = " + properties.frA_ScaleFeedrate);
-  writeComment(eComment.Info, "   Feed: Max XY Cut Speed = " + properties.frB_MaxCutSpeedXY);
-  writeComment(eComment.Info, "   Feed: Max Z Cut Speed = " + properties.frC_MaxCutSpeedZ);
-  writeComment(eComment.Info, "   Feed: Max Toolpath Speed = " + properties.frD_MaxCutSpeedXYZ);
+  WriteComment(eComment.Info, " ");
+  WriteComment(eComment.Info, " Feedrate and Scaling Properties:");
+  WriteComment(eComment.Info, "   Feed: Travel speed X/Y = " + properties.fr0_TravelSpeedXY);
+  WriteComment(eComment.Info, "   Feed: Travel Speed Z = " + properties.fr1_TravelSpeedZ);
+  WriteComment(eComment.Info, "   Feed: Scale Feedrate = " + properties.frA_ScaleFeedrate);
+  WriteComment(eComment.Info, "   Feed: Max XY Cut Speed = " + properties.frB_MaxCutSpeedXY);
+  WriteComment(eComment.Info, "   Feed: Max Z Cut Speed = " + properties.frC_MaxCutSpeedZ);
+  WriteComment(eComment.Info, "   Feed: Max Toolpath Speed = " + properties.frD_MaxCutSpeedXYZ);
 
   // Display the G1->G0 Mapping Properties
-  writeComment(eComment.Info, " ");
-  writeComment(eComment.Info, " G1->G0 Mapping Properties:");
-  writeComment(eComment.Info, "   Map: First G1 -> G0 Rapid = " + properties.mapD_RestoreFirstRapids);
-  writeComment(eComment.Info, "   Map: G1s -> G0 Rapids = " + properties.mapE_RestoreRapids);
-  writeComment(eComment.Info, "   Map: SafeZ Mode = " + eSafeZ.prop[safeZMode].name + " : default = " + safeZHeightDefault);
-  writeComment(eComment.Info, "   Map: Allow Rapid Z = " + properties.mapG_AllowRapidZ);
+  WriteComment(eComment.Info, " ");
+  WriteComment(eComment.Info, " G1->G0 Mapping Properties:");
+  WriteComment(eComment.Info, "   Map: First G1 -> G0 Rapid = " + properties.mapD_RestoreFirstRapids);
+  WriteComment(eComment.Info, "   Map: G1s -> G0 Rapids = " + properties.mapE_RestoreRapids);
+  WriteComment(eComment.Info, "   Map: SafeZ Mode = " + eSafeZ.prop[safeZMode].name + " : default = " + safeZHeightDefault);
+  WriteComment(eComment.Info, "   Map: Allow Rapid Z = " + properties.mapG_AllowRapidZ);
 
-  writeComment(eComment.Info, " ");
+  WriteComment(eComment.Info, " ");
 }
 
-function writeFirstSection() {
+function WriteFirstSection() {
   // Write out the information block at the beginning of the file
-  writeInformation();
+  WriteInformation();
 
-  writeComment(eComment.Important, " *** START begin ***");
-  writeBlock(properties.gcodeStart);
-  writeComment(eComment.Important, " *** START end ***");
-  writeComment(eComment.Important, " ");
+  WriteComment(eComment.Important, " *** START begin ***");
+  WriteBlock(properties.gcodeStart);
+  WriteComment(eComment.Important, " *** START end ***");
+  WriteComment(eComment.Important, " ");
 }
 
 // Output a comment
-function writeComment(level, text) {
+function WriteComment(level, text) {
   if (level <= properties.job3_CommentLevel) {
-    writeln(";" + String(text).replace(/[\(\)]/g, ""));
+    WriteBlock(";" + String(text).replace(/[\(\)]/g, ""));
   }
 }
 
@@ -1024,7 +1028,7 @@ function rapidMovementsXY(_x, _y) {
     }
     else {
       let f = fOutput.format(propertyMmToUnit(properties.fr0_TravelSpeedXY));
-      writeBlock(gMotionModal.format(0), x, y, f);
+      WriteBlock(gMotionModal.format(0), x, y, f);
     }
   }
 }
@@ -1041,7 +1045,7 @@ function rapidMovementsZ(_z) {
     }
     else {
       let f = fOutput.format(propertyMmToUnit(properties.fr1_TravelSpeedZ));
-      writeBlock(gMotionModal.format(0), z, f);
+      WriteBlock(gMotionModal.format(0), z, f);
     }
   }
 }
@@ -1135,13 +1139,13 @@ function linearMovements(_x, _y, _z, _feed) {
     if (pendingRadiusCompensation != RADIUS_COMPENSATION_OFF) {
       error(localize("Radius compensation mode is not supported."));
     } else {
-      writeBlock(gMotionModal.format(1), x, y, z, f);
+      WriteBlock(gMotionModal.format(1), x, y, z, f);
     }
   } else if (f) {
     if (getNextRecord().isMotion()) { // try not to output feed without motion
       fOutput.reset(); // force feed on next line
     } else {
-      writeBlock(gMotionModal.format(1), f);
+      WriteBlock(gMotionModal.format(1), f);
     }
   }
 }
@@ -1155,15 +1159,15 @@ function end() {
 }
 
 function spindleOn(_spindleSpeed, _clockwise) {
-  writeBlock(mFormat.format(_clockwise ? 3 : 4), sOutput.format(spindleSpeed));
+  WriteBlock(mFormat.format(_clockwise ? 3 : 4), sOutput.format(spindleSpeed));
 }
 
 function spindleOff() {
-  writeBlock(mFormat.format(5));
+  WriteBlock(mFormat.format(5));
 }
 
 function display_text(txt) {
-  writeBlock(mFormat.format(117), (properties.job8_SeparateWordsWithSpace ? "" : " ") + txt);
+  WriteBlock(mFormat.format(117), txt);
 }
 
 function circular(clockwise, cx, cy, cz, x, y, z, feed) {
@@ -1177,7 +1181,7 @@ function circular(clockwise, cx, cy, cz, x, y, z, feed) {
     }
     switch (getCircularPlane()) {
       case PLANE_XY:
-        writeBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), iOutput.format(cx - start.x, 0), jOutput.format(cy - start.y, 0), fOutput.format(feed));
+        WriteBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), iOutput.format(cx - start.x, 0), jOutput.format(cy - start.y, 0), fOutput.format(feed));
         break;
       default:
         linearize(tolerance);
@@ -1185,7 +1189,7 @@ function circular(clockwise, cx, cy, cz, x, y, z, feed) {
   } else {
     switch (getCircularPlane()) {
       case PLANE_XY:
-        writeBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), yOutput.format(y), zOutput.format(z), iOutput.format(cx - start.x, 0), jOutput.format(cy - start.y, 0), fOutput.format(feed));
+        WriteBlock(gMotionModal.format(clockwise ? 2 : 3), xOutput.format(x), yOutput.format(y), zOutput.format(z), iOutput.format(cx - start.x, 0), jOutput.format(cy - start.y, 0), fOutput.format(feed));
         break;
       default:
         linearize(tolerance);
@@ -1194,7 +1198,7 @@ function circular(clockwise, cx, cy, cz, x, y, z, feed) {
 }
 
 function askUser(text, title, allowJog) {
-  writeBlock(mFormat.format(0), (properties.job8_SeparateWordsWithSpace ? "" : " ") + text);
+  WriteBlock(mFormat.format(0), text);
 }
 
 function toolChange() {
@@ -1212,7 +1216,7 @@ function toolChange() {
   // Disable Z stepper
   if (properties.toolChange4_DisableZStepper) {
     askUser("Z Stepper will disabled. Wait for STOP!!", "Tool change", false);
-    writeBlock(mFormat.format(17), 'Z'); // Disable steppers timeout
+    WriteBlock(mFormat.format(17), 'Z'); // Disable steppers timeout
   }
   // Ask tool change and wait user to touch lcd button
   askUser("Tool " + tool.number + " " + tool.comment, "Tool change", true);
@@ -1224,25 +1228,25 @@ function toolChange() {
 }
 
 function probeTool() {
-  writeComment(eComment.Important, " Probe to Zero Z");
-  writeComment(eComment.Info, "   Ask User to Attach the Z Probe");
-  writeComment(eComment.Info, "   Do Probing");
-  writeComment(eComment.Info, "   Set Z to probe thickness: " + zFormat.format(propertyMmToUnit(properties.probe3_Thickness)))
+  WriteComment(eComment.Important, " Probe to Zero Z");
+  WriteComment(eComment.Info, "   Ask User to Attach the Z Probe");
+  WriteComment(eComment.Info, "   Do Probing");
+  WriteComment(eComment.Info, "   Set Z to probe thickness: " + zFormat.format(propertyMmToUnit(properties.probe3_Thickness)))
   if (properties.toolChange3_Z != "") {
-    writeComment(eComment.Info, "   Retract the tool to " + propertyMmToUnit(properties.toolChange3_Z));
+    WriteComment(eComment.Info, "   Retract the tool to " + propertyMmToUnit(properties.toolChange3_Z));
   }
-  writeComment(eComment.Info, "   Ask User to Remove the Z Probe");
+  WriteComment(eComment.Info, "   Ask User to Remove the Z Probe");
 
   askUser("Attach ZProbe", "Probe", false);
   // refer http://marlinfw.org/docs/gcode/G038.html
   if (properties.probe4_UseHomeZ) {
-    writeBlock(gFormat.format(28), 'Z');
+    WriteBlock(gFormat.format(28), 'Z');
   } else {
-    writeBlock(gMotionModal.format(38.3), fFormat.format(propertyMmToUnit(properties.probe6_G38Speed)), zFormat.format(propertyMmToUnit(properties.probe5_G38Target)));
+    WriteBlock(gMotionModal.format(38.3), fFormat.format(propertyMmToUnit(properties.probe6_G38Speed)), zFormat.format(propertyMmToUnit(properties.probe5_G38Target)));
   }
 
   let z = zFormat.format(propertyMmToUnit(properties.probe3_Thickness));
-  writeBlock(gFormat.format(92), z); // Set origin to initial position
+  WriteBlock(gFormat.format(92), z); // Set origin to initial position
 
   resetAll();
   if (properties.toolChange3_Z != "") { // move up tool to safe height again after probing
