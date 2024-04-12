@@ -322,8 +322,9 @@ allowedCircularPlanes = undefined;
 // Writes the specified block.
 var gcode = "";
 function WriteBlock() {
-  gcode += Array.from(arguments).join(" ") + "\n";
-  WriteWords(arguments);
+  var line = Array.from(arguments).join(" ");
+  gcode += line + "\n";
+  writeln(line);
 }
 
 function flushMotions() {
