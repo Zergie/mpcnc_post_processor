@@ -4,7 +4,7 @@ param()
 $table = Get-ChildItem $PSScriptRoot -Recurse -Filter *.cfg |
     Sort-Object Name |
     ForEach-Object `
-        -Begin { 
+        -Begin {
             "| Gcode           | Description                    | config   |"
             "| --------------- | ------------------------------ | -------- |"
          } `
@@ -18,11 +18,15 @@ $table = Get-ChildItem $PSScriptRoot -Recurse -Filter *.cfg |
                         }
 
                         $gcode = $_.Substring("[gcode_macro ".Length).Trim().TrimEnd(']')
+
+                        if ($gcode.StartsWith('_')) {
+                            $gcode = ""
+                        }
                     } elseif ($gcode.Length -gt 0 -and $_.StartsWith("description:")) {
                         $description = $_.Substring("description: ".Length).Trim()
 
                         "| $($gcode.PadRight(15, ' ')) | $($description.PadRight(30, ' ')) | $($config.PadRight(8, ' ')) |"
-                        
+
                         $gcode = ""
                         $description = ""
                     }
@@ -37,13 +41,13 @@ $(
                 $insideTable = $true
             }
 
-            if ($insideTable) { 
+            if ($insideTable) {
             } else {
                 $_
             }
          }
     $table
-) | 
+) |
     ForEach-Object {
         Write-Host $_
         $_

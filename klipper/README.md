@@ -56,10 +56,9 @@ managed_services: klipper
 | M8              | Coolant 2 On                   | optional |
 | M9              | All Coolants Off               | optional |
 | PAUSE           | Pause Print                    | optional |
-| PLANE           | PLANES surface                 |          |
+| PLANE           | Planes surface                 |          |
 | PRINT_INFO_G92  | Prints debug info for G92      |          |
-| PROBE_TOOL      | Probes tool and sets tool offset |          |
-| SAVE_Z_RESULT   | Helper for PROBE_TOOL          |          |
+| PROBE_TOOL      | Probes tool and sets offset    |          |
 | RESUME          | Resume the running print       | optional |
 | START_PRINT     | Start Print                    | optional |
 
