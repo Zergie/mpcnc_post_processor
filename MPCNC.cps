@@ -55,12 +55,12 @@ var eCoolant = {
 properties = {
   job3_CommentLevel: eComment.Info,      // The level of comments included
 
-  fr0_TravelSpeedXY: 2500,             // High speed for travel movements X & Y (mm/min)
+  fr0_TravelSpeedXY: 5000,             // High speed for travel movements X & Y (mm/min)
   fr1_TravelSpeedZ: 300,               // High speed for travel movements Z (mm/min)
   frA_ScaleFeedrate: false,            // Will feedrated be scaled
-  frB_MaxCutSpeedXY: 900,              // Max speed for cut movements X & Y (mm/min)
+  frB_MaxCutSpeedXY: 3000,              // Max speed for cut movements X & Y (mm/min)
   frC_MaxCutSpeedZ: 180,               // Max speed for cut movements Z (mm/min)
-  frD_MaxCutSpeedXYZ: 1000,            // Max feedrate after scaling
+  frD_MaxCutSpeedXYZ: 10000,            // Max feedrate after scaling
 
   mapD_RestoreFirstRapids: false,      // Map first G01 --> G00
   mapE_RestoreRapids: false,           // Map G01 --> G00 for SafeTravelsAboveZ
