@@ -531,6 +531,9 @@ function onSection() {
   }
 
   WriteComment(eComment.Important, " *** SECTION begin ***");
+  WriteComment(eComment.Info, " Notes:");
+  writeSectionNotes();
+  WriteComment(eComment.Info, " ");
 
   // Print min/max boundaries for each section
   vectorX = new Vector(1, 0, 0);
@@ -830,6 +833,8 @@ function WriteInformation() {
   }
 
   // Display the Range Table
+  WriteComment(eComment.Info, " Notes:");
+  writeSetupNotes();
   WriteComment(eComment.Info, " ");
   WriteComment(eComment.Info, " Ranges Table:");
   WriteComment(eComment.Info, "   X: Min=" + xyzFormat.format(ranges.x.min) + " Max=" + xyzFormat.format(ranges.x.max) + " Size=" + xyzFormat.format(ranges.x.max - ranges.x.min));
