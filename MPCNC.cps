@@ -57,10 +57,6 @@ properties = {
 
   fr0_TravelSpeedXY: 5000,             // High speed for travel movements X & Y (mm/min)
   fr1_TravelSpeedZ: 300,               // High speed for travel movements Z (mm/min)
-  frA_ScaleFeedrate: false,            // Will feedrated be scaled
-  frB_MaxCutSpeedXY: 3000,              // Max speed for cut movements X & Y (mm/min)
-  frC_MaxCutSpeedZ: 180,               // Max speed for cut movements Z (mm/min)
-  frD_MaxCutSpeedXYZ: 10000,            // Max feedrate after scaling
 
   mapD_RestoreFirstRapids: false,      // Map first G01 --> G00
   mapE_RestoreRapids: false,           // Map G01 --> G00 for SafeTravelsAboveZ
@@ -100,22 +96,6 @@ propertyDefinitions = {
   fr1_TravelSpeedZ: {
     title: "Feed: Travel Speed Z", description: "High speed for Rapid movements z (mm/min; in/min)", group: 2,
     type: "spatial", default_mm: 300, default_in: 12
-  },
-  frA_ScaleFeedrate: {
-    title: "Feed: Scale Feedrate", description: "Scale feedrate based on X, Y, Z axis maximums", group: 2,
-    type: "boolean", default_mm: false, default_in: false
-  },
-  frB_MaxCutSpeedXY: {
-    title: "Feed: Max XY Cut Speed", description: "Maximum X or Y axis cut speed (mm/min; in/min)", group: 2,
-    type: "spatial", default_mm: 900, default_in: 35.43
-  },
-  frC_MaxCutSpeedZ: {
-    title: "Feed: Max Z Cut Speed", description: "Maximum Z axis cut speed (mm/min; in/min)", group: 2,
-    type: "spatial", default_mm: 180, default_in: 7.08
-  },
-  frD_MaxCutSpeedXYZ: {
-    title: "Feed: Max Toolpath Speed", description: "Maximum scaled feedrate for toolpath (mm/min; in/min)", group: 2,
-    type: "spatial", default_mm: 1000, default_in: 39.37
   },
 
   mapD_RestoreFirstRapids: {
@@ -915,10 +895,6 @@ function WriteInformation() {
   WriteComment(eComment.Info, " Feedrate and Scaling Properties:");
   WriteComment(eComment.Info, "   Feed: Travel speed X/Y = " + properties.fr0_TravelSpeedXY);
   WriteComment(eComment.Info, "   Feed: Travel Speed Z = " + properties.fr1_TravelSpeedZ);
-  WriteComment(eComment.Info, "   Feed: Scale Feedrate = " + properties.frA_ScaleFeedrate);
-  WriteComment(eComment.Info, "   Feed: Max XY Cut Speed = " + properties.frB_MaxCutSpeedXY);
-  WriteComment(eComment.Info, "   Feed: Max Z Cut Speed = " + properties.frC_MaxCutSpeedZ);
-  WriteComment(eComment.Info, "   Feed: Max Toolpath Speed = " + properties.frD_MaxCutSpeedXYZ);
 
   // Display the G1->G0 Mapping Properties
   WriteComment(eComment.Info, " ");
@@ -990,64 +966,6 @@ function rapidMovements(_x, _y, _z) {
   rapidMovementsXY(_x, _y);
 }
 
-// Calculate the feedX, feedY and feedZ components
-
-function limitFeedByXYZComponents(curPos, destPos, feed) {
-  if (!properties.frA_ScaleFeedrate)
-    return feed;
-
-  var xyz = Vector.diff(destPos, curPos);       // Translate the cut so curPos is at 0,0,0
-  var dir = xyz.getNormalized();                // Normalize vector to get a direction vector
-  var xyzFeed = Vector.product(dir.abs, feed);  // Determine the effective x,y,z speed on each axis
-
-  // Get the max speed for each axis
-  let xyLimit = propertyMmToUnit(properties.frB_MaxCutSpeedXY);
-  let zLimit = propertyMmToUnit(properties.frC_MaxCutSpeedZ);
-
-  // Normally F360 begins a Section (a milling operation) with a Rapid to move to the beginning of the cut.
-  // Rapids use the defined Travel speed and the Post Processor does not depend on the current location.
-  // This function must know the current location in order to calculate the actual vector traveled. Without
-  // the first Rapid the current location is the same as the desination location, which creates a 0 length
-  // vector. A zero length vector is unusable and so a instead the slowest of the xyLimit or zLimit is used.
-  //
-  // Note: if Map: G1 -> Rapid is enabled in the Properties then if the first operation in a Section is a
-  // cut (which it should always be) then it will be converted to a Rapid. This prevents ever getting a zero
-  // length vector.
-  if (xyz.length == 0) {
-    var lesserFeed = (xyLimit < zLimit) ? xyLimit : zLimit;
-
-    return lesserFeed;
-  }
-
-  // Force the speed of each axis to be within limits
-  if (xyzFeed.z > zLimit) {
-    xyzFeed.multiply(zLimit / xyzFeed.z);
-  }
-
-  if (xyzFeed.x > xyLimit) {
-    xyzFeed.multiply(xyLimit / xyzFeed.x);
-  }
-
-  if (xyzFeed.y > xyLimit) {
-    xyzFeed.multiply(xyLimit / xyzFeed.y);
-  }
-
-  // Calculate the new feedrate based on the speed allowed on each axis: feedrate = sqrt(x^2 + y^2 + z^2)
-  // xyzFeed.length is the same as Math.sqrt((xyzFeed.x * xyzFeed.x) + (xyzFeed.y * xyzFeed.y) + (xyzFeed.z * xyzFeed.z))
-
-  // Limit the new feedrate by the maximum allowable cut speed
-
-  let xyzLimit = propertyMmToUnit(properties.frD_MaxCutSpeedXYZ);
-  let newFeed = (xyzFeed.length > xyzLimit) ? xyzLimit : xyzFeed.length;
-
-  if (Math.abs(newFeed - feed) > 0.01) {
-    return newFeed;
-  }
-  else {
-    return feed;
-  }
-}
-
 // Linear movements
 function linearMovements(_x, _y, _z, _feed) {
   if (pendingRadiusCompensation != RADIUS_COMPENSATION_OFF) {
@@ -1056,17 +974,10 @@ function linearMovements(_x, _y, _z, _feed) {
     yOutput.reset();
   }
 
-  // Force the feedrate to be scaled (if enabled). The feedrate is projected into the
-  // x, y, and z axis and each axis is tested to see if it exceeds its defined max. If
-  // it does then the speed in all 3 axis is scaled proportionately. The resulting feedrate
-  // is then capped at the maximum defined cutrate.
-
-  let feed = limitFeedByXYZComponents(getCurrentPosition(), new Vector(_x, _y, _z), _feed);
-
   let x = xOutput.format(_x);
   let y = yOutput.format(_y);
   let z = zOutput.format(_z);
-  let f = fOutput.format(feed);
+  let f = fOutput.format(_feed);
 
   if (x || y || z) {
     if (pendingRadiusCompensation != RADIUS_COMPENSATION_OFF) {
