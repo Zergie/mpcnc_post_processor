@@ -67,21 +67,8 @@ properties = {
   mapF_SafeZ: "Retract:15",            // G01 mapped to G00 if Z is >= jobSafeZRapid
   mapG_AllowRapidZ: false,             // Allow G01 --> G00 for vertical retracts and Z descents above safe
 
-  toolChange0_Enabled: false,          // Enable tool change code (bultin tool change requires LCD display)
-  toolChange1_X: 0,                    // X position for builtin tool change
-  toolChange2_Y: 0,                    // Y position for builtin tool change
-  toolChange3_Z: 40,                   // Z position for builtin tool change
-  toolChange4_DisableZStepper: false,  // disable Z stepper when change a tool
-
-  probe2_OnToolChange: false,          // Z probe after tool change
-  probe3_Thickness: 0.8,               // plate thickness
-  probe4_UseHomeZ: true,               // use G28 or G38 for probing
-  probe5_G38Target: -10,               // probing up to pos
-  probe6_G38Speed: 30,                 // probing with speed
-
   gcodeStart: "START_PRINT",           // Gcode command for start
   gcodeStop: "END_PRINT",              // Gcode command for end
-  gcodeTool: "",                       // Gcode command for tool change
 
   cl0_coolantA_Mode: eCoolant.Off,     // Enable issuing g-codes for control Coolant channel A
   cl1_cust_coolantAOn: "M7",           // GCode command to turn on Coolant channel A
@@ -148,58 +135,12 @@ propertyDefinitions = {
     type: "boolean", default_mm: false, default_in: true
   },
 
-  toolChange0_Enabled: {
-    title: "Tool Change: Enable", description: "Include tool change code when tool changes (bultin tool change requires LCD display)", group: 4,
-    type: "boolean", default_mm: false, default_in: false
-  },
-  toolChange1_X: {
-    title: "Tool Change: X", description: "X location for tool change", group: 4,
-    type: "spatial", default_mm: 0, default_in: 0
-  },
-  toolChange2_Y: {
-    title: "Tool Change: Y", description: "Y location for tool change", group: 4,
-    type: "spatial", default_mm: 0, default_in: 0
-  },
-  toolChange3_Z: {
-    title: "Tool Change: Z ", description: "Z location for tool change", group: 4,
-    type: "spatial", default_mm: 40, default_in: 1.6
-  },
-  toolChange4_DisableZStepper: {
-    title: "Tool Change: Disable Z stepper", description: "Disable Z stepper after reaching tool change location", group: 4,
-    type: "boolean", default_mm: false, default_in: false
-  },
-
-  probe2_OnToolChange: {
-    title: "Probe: After Tool Change", description: "After tool change, probe Z at the current location", group: 5,
-    type: "boolean", default_mm: false, default_in: false
-  },
-  probe3_Thickness: {
-    title: "Probe: Plate thickness", description: "Plate thickness", group: 5,
-    type: "spatial", default_mm: 0.8, default_in: 0.032
-  },
-  probe4_UseHomeZ: {
-    title: "Probe: Use Home Z (G28)", description: "Probe with G28 (Yes) or G38 (No)", group: 5,
-    type: "boolean", default_mm: true, default_in: true
-  },
-  probe5_G38Target: {
-    title: "Probe: G38 target", description: "G38 Probing's furthest Z position", group: 5,
-    type: "spatial", default_mm: -10, default_in: -0.5
-  },
-  probe6_G38Speed: {
-    title: "Probe: G38 speed", description: "G38 Probing's speed (mm/min; in/min)", group: 5,
-    type: "spatial", default_mm: 30, default_in: 1.2
-  },
-
   gcodeStart: {
     title: "Start Gcode", description: "Gcode for start", group: 7,
     type: "string", default_mm: "", default_in: ""
   },
   gcodeStop: {
     title: "Stop/End Gcode", description: "Gcode for end", group: 7,
-    type: "string", default_mm: "", default_in: ""
-  },
-  gcodeTool: {
-    title: "Toolchange Gcode", description: "Gcode for tool change", group: 7,
     type: "string", default_mm: "", default_in: ""
   },
 
@@ -653,14 +594,6 @@ function onSection() {
   // Determine the Safe Z Height to map G1s to G0s
   safeZforSection(currentSection);
 
-  // Do a tool change if tool changes are enabled and its not the first section and this section uses
-  // a different tool then the previous section
-  if (properties.toolChange0_Enabled && !isFirstSection() && tool.number != getPreviousSection().getTool().number) {
-    WriteComment(eComment.Important, " --- Tool Change Start")
-    WriteBlock(properties.gcodeTool);
-    WriteComment(eComment.Important, " --- Tool Change End")
-  }
-
   WriteComment(eComment.Info, " " + sectionComment + " - Milling - Tool: " + tool.number + " - " + tool.comment + " " + getToolTypeName(tool.type));
 
   onCommand(COMMAND_START_SPINDLE);
@@ -897,7 +830,6 @@ function onCommand(command) {
     case COMMAND_BREAK_CONTROL:
       return;
     case COMMAND_TOOL_MEASURE:
-      probeTool();
       return;
     case COMMAND_STOP:
       WriteBlock(mFormat.format(0));
@@ -1200,61 +1132,4 @@ function circular(clockwise, cx, cy, cz, x, y, z, feed) {
 
 function askUser(text, title, allowJog) {
   WriteBlock(mFormat.format(0), text);
-}
-
-function toolChange() {
-  flushMotions();
-
-  // Go to tool change position
-  onRapid(propertyMmToUnit(properties.toolChange1_X), propertyMmToUnit(properties.toolChange2_Y), propertyMmToUnit(properties.toolChange3_Z));
-
-  flushMotions();
-
-  // turn off spindle and coolant
-  onCommand(COMMAND_COOLANT_OFF);
-  onCommand(COMMAND_STOP_SPINDLE);
-
-  // Disable Z stepper
-  if (properties.toolChange4_DisableZStepper) {
-    askUser("Z Stepper will disabled. Wait for STOP!!", "Tool change", false);
-    WriteBlock(mFormat.format(17), 'Z'); // Disable steppers timeout
-  }
-  // Ask tool change and wait user to touch lcd button
-  askUser("Tool " + tool.number + " " + tool.comment, "Tool change", true);
-
-  // Run Z probe gcode
-  if (properties.probe2_OnToolChange && tool.number != 0) {
-    onCommand(COMMAND_TOOL_MEASURE);
-  }
-}
-
-function probeTool() {
-  WriteComment(eComment.Important, " Probe to Zero Z");
-  WriteComment(eComment.Info, "   Ask User to Attach the Z Probe");
-  WriteComment(eComment.Info, "   Do Probing");
-  WriteComment(eComment.Info, "   Set Z to probe thickness: " + zFormat.format(propertyMmToUnit(properties.probe3_Thickness)))
-  if (properties.toolChange3_Z != "") {
-    WriteComment(eComment.Info, "   Retract the tool to " + propertyMmToUnit(properties.toolChange3_Z));
-  }
-  WriteComment(eComment.Info, "   Ask User to Remove the Z Probe");
-
-  askUser("Attach ZProbe", "Probe", false);
-  // refer http://marlinfw.org/docs/gcode/G038.html
-  if (properties.probe4_UseHomeZ) {
-    WriteBlock(gFormat.format(28), 'Z');
-  } else {
-    WriteBlock(gMotionModal.format(38.3), fFormat.format(propertyMmToUnit(properties.probe6_G38Speed)), zFormat.format(propertyMmToUnit(properties.probe5_G38Target)));
-  }
-
-  let z = zFormat.format(propertyMmToUnit(properties.probe3_Thickness));
-  WriteBlock(gFormat.format(92), z); // Set origin to initial position
-
-  resetAll();
-  if (properties.toolChange3_Z != "") { // move up tool to safe height again after probing
-    rapidMovementsZ(propertyMmToUnit(properties.toolChange3_Z), false);
-  }
-
-  flushMotions();
-
-  askUser("Detach ZProbe", "Probe", false);
 }
