@@ -3,7 +3,7 @@ param()
 $klipper_url = "trident.local"
 $klipper_user = "biqu"
 $gcode = @(
-    # "G28"
+    "G28"
     "G92.3"
     "G56"
     "G92 X10 Y10"
@@ -33,7 +33,7 @@ git push -f
 
 Write-Host
 Write-Host -ForegroundColor Cyan "== Installing on ${klipper_url} =="
-ssh ${klipper_user}@${klipper_url} "cd ~/mpcnc_post_processor; git fetch; git reset --hard origin/master"
+ssh ${klipper_user}@${klipper_url} "cd ~/mpcnc_post_processor; git fetch; git reset --hard origin/main"
 
 
 Write-Host

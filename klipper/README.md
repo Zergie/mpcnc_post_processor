@@ -59,6 +59,7 @@ managed_services: klipper
 | PLANE           | Planes surface                 |          |
 | PRINT_INFO_G92  | Prints debug info for G92      |          |
 | PROBE_TOOL      | Probes tool and sets offset    |          |
+| RELAY_OFF       | Turn all via relay connected devices off | optional |
 | RESUME          | Resume the running print       | optional |
 | START_PRINT     | Start Print                    | optional |
 
