@@ -547,6 +547,13 @@ function onSection() {
 
   WriteComment(eComment.Info, " " + sectionComment + " - Milling - Tool: " + tool.number + " - " + tool.comment + " " + getToolTypeName(tool.type));
 
+  WriteBlock(
+    "START_PRINT"
+    , "X=" + xyzFormat.format(currentSection.getGlobalRange(vectorX).getMinimum()) + "," + xyzFormat.format(currentSection.getGlobalRange(vectorX).getMaximum())
+    , "Y=" + xyzFormat.format(currentSection.getGlobalRange(vectorY).getMinimum()) + "," + xyzFormat.format(currentSection.getGlobalRange(vectorY).getMaximum())
+    , "Z=" + xyzFormat.format(currentSection.getGlobalZRange().getMinimum()) + "," + xyzFormat.format(currentSection.getGlobalZRange().getMaximum())
+  )
+
   onCommand(COMMAND_START_SPINDLE);
   onCommand(COMMAND_COOLANT_ON);
 
@@ -873,7 +880,6 @@ function WriteInformation() {
 function WriteFirstSection() {
   // Write out the information block at the beginning of the file
   WriteInformation();
-  WriteBlock("START_PRINT");
   WriteComment(eComment.Important, " ");
 }
 
