@@ -59,9 +59,6 @@ properties = {
   mapF_SafeZ: "Retract:15",            // G01 mapped to G00 if Z is >= jobSafeZRapid
   mapG_AllowRapidZ: false,             // Allow G01 --> G00 for vertical retracts and Z descents above safe
 
-  gcodeStart: "START_PRINT",           // Gcode command for start
-  gcodeStop: "END_PRINT",              // Gcode command for end
-
   cl0_coolantA_Mode: eCoolant.Off,     // Enable issuing g-codes for control Coolant channel A
   cl1_cust_coolantAOn: "M7",           // GCode command to turn on Coolant channel A
   cl2_cust_coolantAOff: "M9",          // Gcode command to turn off Coolant channel A
@@ -96,15 +93,6 @@ propertyDefinitions = {
   mapG_AllowRapidZ: {
     title: "Map: Allow Rapid Z", description: "Enable to include vertical retracts and safe descents", group: 3,
     type: "boolean", default_mm: true, default_in: true
-  },
-
-  gcodeStart: {
-    title: "Start Gcode", description: "Gcode for start", group: 7,
-    type: "string", default_mm: "", default_in: ""
-  },
-  gcodeStop: {
-    title: "Stop/End Gcode", description: "Gcode for end", group: 7,
-    type: "string", default_mm: "", default_in: ""
   },
 
   // Coolant
@@ -500,9 +488,7 @@ function onOpen() {
 // Called at end of gcode file
 function onClose() {
   flushMotions();
-  WriteComment(eComment.Important, " *** STOP begin ***");
-  WriteBlock(properties.gcodeStop)
-  WriteComment(eComment.Important, " *** STOP end ***");
+  WriteBlock("END_PRINT")
 
   const url = properties.klipper0_url;
   if (url.length > 0) {
@@ -883,10 +869,7 @@ function WriteInformation() {
 function WriteFirstSection() {
   // Write out the information block at the beginning of the file
   WriteInformation();
-
-  WriteComment(eComment.Important, " *** START begin ***");
-  WriteBlock(properties.gcodeStart);
-  WriteComment(eComment.Important, " *** START end ***");
+  WriteBlock("START_PRINT");
   WriteComment(eComment.Important, " ");
 }
 
