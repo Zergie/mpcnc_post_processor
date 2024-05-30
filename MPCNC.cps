@@ -55,10 +55,6 @@ var eCoolant = {
 properties = {
   job3_CommentLevel: eComment.Info,      // The level of comments included
 
-  fr0_TravelSpeedXY: 5000,             // High speed for travel movements X & Y (mm/min)
-  fr1_TravelSpeedZ: 300,               // High speed for travel movements Z (mm/min)
-
-  mapD_RestoreFirstRapids: false,      // Map first G01 --> G00
   mapE_RestoreRapids: false,           // Map G01 --> G00 for SafeTravelsAboveZ
   mapF_SafeZ: "Retract:15",            // G01 mapped to G00 if Z is >= jobSafeZRapid
   mapG_AllowRapidZ: false,             // Allow G01 --> G00 for vertical retracts and Z descents above safe
@@ -89,22 +85,9 @@ propertyDefinitions = {
     ]
   },
 
-  fr0_TravelSpeedXY: {
-    title: "Feed: Travel speed X/Y", description: "High speed for Rapid movements X & Y (mm/min; in/min)", group: 2,
-    type: "spatial", default_mm: 7800, default_in: 100
-  },
-  fr1_TravelSpeedZ: {
-    title: "Feed: Travel Speed Z", description: "High speed for Rapid movements z (mm/min; in/min)", group: 2,
-    type: "spatial", default_mm: 300, default_in: 12
-  },
-
-  mapD_RestoreFirstRapids: {
-    title: "Map: First G1 -> G0 Rapid", description: "Ensure move to start of a cut is with a G0 Rapid", group: 3,
-    type: "boolean", default_mm: false, default_in: false
-  },
   mapE_RestoreRapids: {
     title: "Map: G1s -> G0 Rapids", description: "Enable to convert G1s to G0 Rapids when safe", group: 3,
-    type: "boolean", default_mm: false, default_in: false
+    type: "boolean", default_mm:true, default_in: true
   },
   mapF_SafeZ: {
     title: "Map: Safe Z to Rapid", description: "Must be above or equal to this value to map G1s --> G0s; constant or keyword (see docs)", group: 3,
@@ -112,7 +95,7 @@ propertyDefinitions = {
   },
   mapG_AllowRapidZ: {
     title: "Map: Allow Rapid Z", description: "Enable to include vertical retracts and safe descents", group: 3,
-    type: "boolean", default_mm: false, default_in: true
+    type: "boolean", default_mm: true, default_in: true
   },
 
   gcodeStart: {
@@ -603,7 +586,6 @@ function onRadiusCompensation() {
 // Rapid movements
 function onRapid(x, y, z) {
   forceSectionToStartWithRapid = false;
-
   rapidMovements(x, y, z);
 }
 
@@ -618,9 +600,7 @@ function onLinear(x, y, z, feed) {
   // is enabled then the first move to the start of a section will be at the
   // slowest cutting feedrate, generally Z's feedrate.
 
-  if (properties.mapD_RestoreFirstRapids && (forceSectionToStartWithRapid == true)) {
-    WriteComment(eComment.Important, " First G1 --> G0");
-
+  if (forceSectionToStartWithRapid == true) {
     forceSectionToStartWithRapid = false;
     onRapid(x, y, z);
   }
@@ -890,16 +870,9 @@ function WriteInformation() {
     }
   }
 
-  // Display the Feedrate and Scaling Properties
-  WriteComment(eComment.Info, " ");
-  WriteComment(eComment.Info, " Feedrate and Scaling Properties:");
-  WriteComment(eComment.Info, "   Feed: Travel speed X/Y = " + properties.fr0_TravelSpeedXY);
-  WriteComment(eComment.Info, "   Feed: Travel Speed Z = " + properties.fr1_TravelSpeedZ);
-
   // Display the G1->G0 Mapping Properties
   WriteComment(eComment.Info, " ");
   WriteComment(eComment.Info, " G1->G0 Mapping Properties:");
-  WriteComment(eComment.Info, "   Map: First G1 -> G0 Rapid = " + properties.mapD_RestoreFirstRapids);
   WriteComment(eComment.Info, "   Map: G1s -> G0 Rapids = " + properties.mapE_RestoreRapids);
   WriteComment(eComment.Info, "   Map: SafeZ Mode = " + eSafeZ.prop[safeZMode].name + " : default = " + safeZHeightDefault);
   WriteComment(eComment.Info, "   Map: Allow Rapid Z = " + properties.mapG_AllowRapidZ);
@@ -924,46 +897,21 @@ function WriteComment(level, text) {
   }
 }
 
-// Rapid movements with G1 and differentiated travel speeds for XY
-// Changes F360 current XY.
-// No longer called for general Rapid only for probing, homing, etc.
-function rapidMovementsXY(_x, _y) {
-  let x = xOutput.format(_x);
-  let y = yOutput.format(_y);
-
-  if (x || y) {
-    if (pendingRadiusCompensation != RADIUS_COMPENSATION_OFF) {
-      error(localize("Radius compensation mode cannot be changed at rapid traversal."));
-    }
-    else {
-      let f = fOutput.format(propertyMmToUnit(properties.fr0_TravelSpeedXY));
-      WriteBlock(gMotionModal.format(0), x, y, f);
-    }
-  }
-}
-
-// Rapid movements with G1 and differentiated travel speeds for Z
-// Changes F360 current Z
-// No longer called for general Rapid only for probing, homing, etc.
-function rapidMovementsZ(_z) {
-  let z = zOutput.format(_z);
-
-  if (z) {
-    if (pendingRadiusCompensation != RADIUS_COMPENSATION_OFF) {
-      error(localize("Radius compensation mode cannot be changed at rapid traversal."));
-    }
-    else {
-      let f = fOutput.format(propertyMmToUnit(properties.fr1_TravelSpeedZ));
-      WriteBlock(gMotionModal.format(0), z, f);
-    }
-  }
-}
-
 // Rapid movements with G1 uses the max travel rate (xy or z) and then relies on feedrate scaling
 function rapidMovements(_x, _y, _z) {
+  let x = xOutput.format(_x);
+  let y = yOutput.format(_y);
+  let z = zOutput.format(_z);
+  let f = fOutput.format(99999);
 
-  rapidMovementsZ(_z);
-  rapidMovementsXY(_x, _y);
+  if (x || y || z) {
+    if (pendingRadiusCompensation != RADIUS_COMPENSATION_OFF) {
+      error(localize("Radius compensation mode cannot be changed at rapid traversal."));
+    }
+    else {
+      WriteBlock(gMotionModal.format(0), x, y, z, f);
+    }
+  }
 }
 
 // Linear movements
