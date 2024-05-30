@@ -55,9 +55,9 @@ var eCoolant = {
 properties = {
   job3_CommentLevel: eComment.Info,      // The level of comments included
 
-  mapE_RestoreRapids: false,           // Map G01 --> G00 for SafeTravelsAboveZ
+  mapE_RestoreRapids: true,           // Map G01 --> G00 for SafeTravelsAboveZ
   mapF_SafeZ: "Retract:15",            // G01 mapped to G00 if Z is >= jobSafeZRapid
-  mapG_AllowRapidZ: false,             // Allow G01 --> G00 for vertical retracts and Z descents above safe
+  mapG_AllowRapidZ: true,             // Allow G01 --> G00 for vertical retracts and Z descents above safe
 
   cl0_coolantA_Mode: eCoolant.Off,     // Enable issuing g-codes for control Coolant channel A
   cl1_cust_coolantAOn: "M7",           // GCode command to turn on Coolant channel A
@@ -72,7 +72,7 @@ properties = {
 
 propertyDefinitions = {
   job3_CommentLevel: {
-    title: "Job: Comment Level", description: "Controls the comments include", group: 1,
+    title: "Job: Comment Level", description: "Controls the comments include", group: "1 Debug",
     type: "integer", default_mm: eComment.Info, default_in: eComment.Info,
     values: [
       { title: eComment.prop[eComment.Off].name, id: eComment.Off },
@@ -83,21 +83,21 @@ propertyDefinitions = {
   },
 
   mapE_RestoreRapids: {
-    title: "Map: G1s -> G0 Rapids", description: "Enable to convert G1s to G0 Rapids when safe", group: 3,
+    title: "Map: G1s -> G0 Rapids", description: "Enable to convert G1s to G0 Rapids when safe", group: "2 Movement",
     type: "boolean", default_mm:true, default_in: true
   },
   mapF_SafeZ: {
-    title: "Map: Safe Z to Rapid", description: "Must be above or equal to this value to map G1s --> G0s; constant or keyword (see docs)", group: 3,
+    title: "Map: Safe Z to Rapid", description: "Must be above or equal to this value to map G1s --> G0s; constant or keyword (see docs)", group: "2 Movement",
     type: "string", default_mm: "Retract:15", default_in: "Retract:15"
   },
   mapG_AllowRapidZ: {
-    title: "Map: Allow Rapid Z", description: "Enable to include vertical retracts and safe descents", group: 3,
+    title: "Map: Allow Rapid Z", description: "Enable to include vertical retracts and safe descents", group: "2 Movement",
     type: "boolean", default_mm: true, default_in: true
   },
 
   // Coolant
   cl0_coolantA_Mode: {
-    title: "Coolant: A Mode", description: "Enable channel A when tool is set this coolant", group: 8,
+    title: "Coolant: A Mode", description: "Enable channel A when tool is set this coolant", group: "3 Coolant",
     type: "integer", default_mm: 0, default_in: 0,
     values: [
       { title: eCoolant.prop[eCoolant.Off].name, id: eCoolant.Off },
@@ -112,15 +112,15 @@ propertyDefinitions = {
     ]
   },
   cl1_cust_coolantAOn: {
-    title: "Coolant: A Enable", description: "GCode to turn On coolant channel A", group: 8,
+    title: "Coolant: A Enable", description: "GCode to turn On coolant channel A", group: "3 Coolant",
     type: "string", default_mm: "", default_in: "",
   },
   cl2_cust_coolantAOff: {
-    title: "Coolant: A Disable", description: "Gcode to turn Off coolant A", group: 8,
+    title: "Coolant: A Disable", description: "Gcode to turn Off coolant A", group: "3 Coolant",
     type: "string", default_mm: "", default_in: "",
   },
   cl3_coolantB_Mode: {
-    title: "Coolant: B Mode", description: "Enable channel B when tool is set this coolant", group: 8,
+    title: "Coolant: B Mode", description: "Enable channel B when tool is set this coolant", group: "3 Coolant",
     type: "integer", default_mm: 0, default_in: 0,
     values: [
       { title: eCoolant.prop[eCoolant.Off].name, id: eCoolant.Off },
@@ -135,22 +135,21 @@ propertyDefinitions = {
     ]
   },
   cl4_cust_coolantBOn: {
-    title: "Coolant: B Enable", description: "GCode to turn On coolant channel B", group: 8,
+    title: "Coolant: B Enable", description: "GCode to turn On coolant channel B", group: "3 Coolant",
     type: "string", default_mm: "", default_in: "",
   },
   cl5_cust_coolantBOff: {
-    title: "Coolant: B Disable", description: "Gcode to turn Off coolant B", group: 8,
+    title: "Coolant: B Disable", description: "Gcode to turn Off coolant B", group: "3 Coolant",
     type: "string", default_mm: "", default_in: "",
   },
 
-  // klipper
   klipper0_url : {
-    title: "Klipper url", description: "URL to upload to (must start with http:// or https://)", group: 9,
+    title: "Klipper url", description: "URL to upload to (must start with http:// or https://)", group: "4 Klipper",
     type: "string", default_mm: "", default_in: "",
   },
 
   klipper1_startAfterUpload : {
-    title: "Start After Upload", description: "Start machine after upload", group: 9,
+    title: "Start After Upload", description: "Start machine after upload", group: "4 Klipper",
     type: "boolean", default_mm: false, default_in: false,
   },
 };
