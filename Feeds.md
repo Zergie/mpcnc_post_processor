@@ -11,6 +11,16 @@
 | Feed XY   | 3600     | 2250     |
 | Feed Z    | 720      | 450      |
 
+### Buche
+
+|           | Finish   | Rough    |
+|-----------|----------|----------|
+| RPM       | Makita 6 | Makita 6 |
+| Step down | 1 mm     | 1 mm     |
+| Feed XY   |          | 2500     |
+| Feed Z    |          | ?        |
+
+
 
 ## 25 x 51 mm end mill
 
