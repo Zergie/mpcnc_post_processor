@@ -5,8 +5,8 @@ $klipper_user = "mks"
 $gcode = @(
     "RESTART"
     "G28"
-    "G54 G0 X0 Y0"
-    "START_PRINT X=0,100 Y=0,100 Z=0,1"
+    "G0 X330 Y0"
+    "PROBE_TOOL"
 )
 
 git add .
