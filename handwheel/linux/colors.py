@@ -12,6 +12,7 @@ class fg:
   magenta = "\u001b[35m"
   cyan = "\u001b[36m"
   white = "\u001b[37m"
+  gray = "\u001b[38;2;8;8;8m"
 
   @staticmethod
   def rgb(r, g, b):

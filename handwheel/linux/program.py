@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 
 import re
+from time import sleep
+
+from serial import SerialException
 from colors import *
 import json
 import websocket
 
-from Tft import Tft
+from JogWheel import JogWheel
 from MainScreen import MainScreen
 
 
 host = "trident.local"
-tft = Tft('COM4')
+jog = JogWheel()
+screen = MainScreen(jog)
 
 # moonraker api: https://moonraker.readthedocs.io/en/latest/web_api/
 # klipper objects: https://www.klipper3d.org/Status_Reference.html
@@ -21,9 +25,9 @@ state = {
 }
 
 def on_open(wsapp):
-    global tft
-    tft.print(0, 30, ".. connected!")
-    tft.print(0, 40, "Subscribing to events ...")
+    global jog
+    jog.printline(".. connected!")
+    jog.printline("Subscribing to events ...")
 
     message = {
         "jsonrpc": "2.0",
@@ -40,7 +44,6 @@ def on_open(wsapp):
     wsapp.send(json.dumps(message))
 
 def on_message(wsapp, message):
-    global tft
     global screen
     msg = json.loads(message)
     updated = False
@@ -73,18 +76,43 @@ def on_message(wsapp, message):
 def on_close(wsapp):
     print("connection closed")
 
+def on_button(index):
+    global screen
+    screen.on_button(index)
+
+def on_rotary(index, value):
+    global screen
+    screen.on_rotary(index, value)
+
+def on_encoder(index, value):
+    global screen
+    screen.on_encoder(index, value)
+
 if __name__ == '__main__':
-    screen = MainScreen(tft)
+    jog.on_button = on_button
+    jog.on_rotary = on_rotary
+    jog.on_encoder = on_encoder
 
-    tft.fillScreen(0x0000)
-    tft.print(0, 0, "Loading ...")
+    print("Looking for controller ...")
+    port = 11
+    while not jog.is_attached:
+        if port > 19:
+            port = 3
+        try:
+            # print(f"Trying COM{port}..")
+            jog.attach(f'COM{port}')
+        except SerialException as e:
+            port += 1
 
-    tft.print(0, 10, f"Trying to connect {host} ...") # todo: implement printline
-    ws = websocket.WebSocketApp(f'ws://{host}/websocket',
-                                on_open=on_open,
-                                on_message=on_message,
-                                on_close=on_close,
-                                )
-    ws.run_forever()
-
-    tft.close()
+    jog.printline(f"Connected via {jog.serial.portstr}.")
+    jog.printline(f"Trying to connect {host} ...")
+    jog.debug = ("<", "encoder<")
+    # jog.debug = ("print>",)
+    # ws = websocket.WebSocketApp(f'ws://{host}/websocket',
+    #                             on_open=on_open,
+    #                             on_message=on_message,
+    #                             on_close=on_close,
+    #                             )
+    # ws.run_forever()
+    sleep(10)
+    jog.close()
