@@ -492,12 +492,13 @@ function onClose() {
   const url = properties.klipper0_url;
   if (url.length > 0) {
     var filename = FileSystem.getFilename(getOutputPath());
-
+    const safeFilename = encodeURIComponent(filename);
     const xhr = new XMLHttpRequest();
+
     xhr.open("POST", `${url}/server/files/upload`, false, null, null);
-    xhr.setRequestHeader('Content-Type', ' multipart/form-data; boundary="3a7e4fd3-e5b7-450d-adc4-9bb652adadf2"');
+    xhr.setRequestHeader('Content-Type', 'multipart/form-data; boundary="3a7e4fd3-e5b7-450d-adc4-9bb652adadf2"');
     xhr.send("--3a7e4fd3-e5b7-450d-adc4-9bb652adadf2\r\n" + 
-            `Content-Disposition: form-data; name=file; filename=${filename}\r\n` +
+            `Content-Disposition: form-data; name=file; filename="${filename}"\r\n` +
             "Content-Type: application/octet-stream\r\n" +
             "\r\n" +
             gcode + 
@@ -506,7 +507,7 @@ function onClose() {
     
       if (properties.klipper1_startAfterUpload) {
             const xhr = new XMLHttpRequest();
-            xhr.open("POST", `${url}/printer/print/start?filename=${filename}`, false, null, null);
+            xhr.open("POST", `${url}/printer/print/start?filename=${safeFilename}`, false, null, null);
             xhr.send("bob");
     }
   }
