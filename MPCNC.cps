@@ -53,18 +53,16 @@ var eCoolant = {
 
 // user-defined properties
 properties = {
-  job3_CommentLevel: eComment.Info,      // The level of comments included
+  job3_CommentLevel: eComment.Info,    // The level of comments included
 
-  mapE_RestoreRapids: true,           // Map G01 --> G00 for SafeTravelsAboveZ
+  mapE_RestoreRapids: true,            // Map G01 --> G00 for SafeTravelsAboveZ
   mapF_SafeZ: "Retract:15",            // G01 mapped to G00 if Z is >= jobSafeZRapid
-  mapG_AllowRapidZ: true,             // Allow G01 --> G00 for vertical retracts and Z descents above safe
+  mapG_AllowRapidZ: true,              // Allow G01 --> G00 for vertical retracts and Z descents above safe
 
   cl0_coolantA_Mode: eCoolant.Off,     // Enable issuing g-codes for control Coolant channel A
-  cl1_cust_coolantAOn: "M7",           // GCode command to turn on Coolant channel A
-  cl2_cust_coolantAOff: "M9",          // Gcode command to turn off Coolant channel A
   cl3_coolantB_Mode: eCoolant.Off,     // Use issuing g-codes for control Coolant channel B
-  cl4_cust_coolantBOn: "M8",           // GCode command to turn on Coolant channel B
-  cl5_cust_coolantBOff: "M9",          // Gcode command to turn off Coolant channel B
+
+  gcode_end: "",                       // end gcode
 
   klipper0_url: "",                    // url of the klipper instance (e.g. http://10.0.0.99)
   klipper1_startAfterUpload: false,    // start machining after upload to klipper
@@ -111,14 +109,6 @@ propertyDefinitions = {
       { title: eCoolant.prop[eCoolant.FloodThroughTool].name, id: eCoolant.FloodThroughTool }
     ]
   },
-  cl1_cust_coolantAOn: {
-    title: "Coolant: A Enable", description: "GCode to turn On coolant channel A", group: "3 Coolant",
-    type: "string", default_mm: "", default_in: "",
-  },
-  cl2_cust_coolantAOff: {
-    title: "Coolant: A Disable", description: "Gcode to turn Off coolant A", group: "3 Coolant",
-    type: "string", default_mm: "", default_in: "",
-  },
   cl3_coolantB_Mode: {
     title: "Coolant: B Mode", description: "Enable channel B when tool is set this coolant", group: "3 Coolant",
     type: "integer", default_mm: 0, default_in: 0,
@@ -134,22 +124,19 @@ propertyDefinitions = {
       { title: eCoolant.prop[eCoolant.FloodThroughTool].name, id: eCoolant.FloodThroughTool }
     ]
   },
-  cl4_cust_coolantBOn: {
-    title: "Coolant: B Enable", description: "GCode to turn On coolant channel B", group: "3 Coolant",
-    type: "string", default_mm: "", default_in: "",
-  },
-  cl5_cust_coolantBOff: {
-    title: "Coolant: B Disable", description: "Gcode to turn Off coolant B", group: "3 Coolant",
+
+  gcode_end : {
+    title: "End Gcode", description: "G-code after the program is finished", group: "4 Gcode",
     type: "string", default_mm: "", default_in: "",
   },
 
   klipper0_url : {
-    title: "Klipper url", description: "URL to upload to (must start with http:// or https://)", group: "4 Klipper",
+    title: "Klipper url", description: "URL to upload to (must start with http:// or https://)", group: "5 Klipper",
     type: "string", default_mm: "", default_in: "",
   },
 
   klipper1_startAfterUpload : {
-    title: "Start After Upload", description: "Start machine after upload", group: "4 Klipper",
+    title: "Start After Upload", description: "Start machine after upload", group: "5 Klipper",
     type: "boolean", default_mm: false, default_in: false,
   },
 };
@@ -402,12 +389,12 @@ function isSafeToRapid(x, y, z) {
 //---------------- Coolant ----------------
 
 function CoolantA(on) {
-  coolantText = on ? properties.cl1_cust_coolantAOn : properties.cl2_cust_coolantAOff;
+  coolantText = on ? "M7" : "M9";
   WriteBlock(coolantText);
 }
 
 function CoolantB(on) {
-  coolantText = on ? properties.cl4_cust_coolantBOn : properties.cl5_cust_coolantBOff;
+  coolantText = on ? "M8" : "M9";
   WriteBlock(coolantText);
 }
 
@@ -488,6 +475,7 @@ function onOpen() {
 function onClose() {
   flushMotions();
   WriteBlock("END_PRINT")
+  WriteBlock(properties.gcode_end)
 
   const url = properties.klipper0_url;
   if (url.length > 0) {
@@ -496,11 +484,11 @@ function onClose() {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `${url}/server/files/upload`, false, null, null);
     xhr.setRequestHeader('Content-Type', ' multipart/form-data; boundary="3a7e4fd3-e5b7-450d-adc4-9bb652adadf2"');
-    xhr.send("--3a7e4fd3-e5b7-450d-adc4-9bb652adadf2\r\n" + 
+    xhr.send("--3a7e4fd3-e5b7-450d-adc4-9bb652adadf2\r\n" +
             `Content-Disposition: form-data; name=file; filename=${filename}\r\n` +
             "Content-Type: application/octet-stream\r\n" +
             "\r\n" +
-            gcode + 
+            gcode +
             "\r\n\r\n" +
             "--3a7e4fd3-e5b7-450d-adc4-9bb652adadf2--\r\n");
     
